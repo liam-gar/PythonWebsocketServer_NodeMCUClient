@@ -5,7 +5,7 @@
 #include <WebSocketsClient_Generic.h>
 #include <SocketIOclient_Generic.h>
 
-const char* ssid = ""; //Enter SSID
+const char* ssid = "4US2 WiFi"; //Enter SSID
 const char* password = ""; //Enter Password
 
 // Select the server IP address and port according to your local network
@@ -14,7 +14,6 @@ uint16_t  serverPort = 5001;
 
 // Initalize SocketIO client
 SocketIOclient socketIO;
-
 
 // Function for recieveing different socketIO events
 void socketIOEvent(const socketIOmessageType_t& type, uint8_t * payload, const size_t& length)
@@ -35,11 +34,42 @@ void socketIOEvent(const socketIOmessageType_t& type, uint8_t * payload, const s
     case sIOtype_EVENT:
       Serial.print("[IOc] Get event: ");
       Serial.println((char*) payload);
+      
+      handleNewEvent((char*) payload);
+
+      break;
+    case sIOtype_PING:
+      Serial.println("[IOc] Get PING");
+
+      break;
+
+   case sIOtype_PONG:
+      Serial.println("[IOc] Get PONG");
+
       break;
 
     default:
       break;
   }
+}
+
+void handleNewEvent(char* jsonEvent) {
+  DynamicJsonDocument doc(1024);
+  DeserializationError error = deserializeJson(doc, jsonEvent);
+
+  if (error) {
+    Serial.print("Deserialization Failed: ");
+    Serial.println(error.f_str());
+    return;
+  }
+
+  if (strcmp(doc[0], "date") == 0) {
+    Serial.print("Received Date Event: ");
+    const char* date = doc[1];
+    Serial.println(date);
+    return;
+  }
+
 }
 
 void setup()
@@ -48,8 +78,8 @@ void setup()
     Serial.println("Connecting...\n");
     
     WiFi.mode(WIFI_STA);
-    WiFi.begin(ssid, password); // change it to your current wifi ssid and password
-  //  WiFi.begin(ssid); // Use when connecting to the 4US2 Wifi
+    // WiFi.begin(ssid, password); // change it to your current wifi ssid and password
+   WiFi.begin(ssid); // Use when connecting to the 4US2 Wifi
     
     // Connect to Wifi
     while (WiFi.status() != WL_CONNECTED)
@@ -72,32 +102,32 @@ void setup()
 
 unsigned long messageTimestamp = 0;
 void loop() {
+  
+  socketIO.loop();
 
-      socketIO.loop();
+  // uint64_t now = millis();
 
-      uint64_t now = millis();
+  // if (now - messageTimestamp > 12000) 
+  // {
+  //   messageTimestamp = now;
 
-  if (now - messageTimestamp > 12000) 
-  {
-    messageTimestamp = now;
+  //   // creat JSON message for Socket.IO (event)
+  //   DynamicJsonDocument doc(1024);
+  //   JsonArray array = doc.to<JsonArray>();
 
-    // creat JSON message for Socket.IO (event)
-    DynamicJsonDocument doc(1024);
-    JsonArray array = doc.to<JsonArray>();
-
-    // add evnet name
-    // Hint: socket.on('event_name', ....
-    array.add("output_value");
-    array.add("80");
+  //   // add evnet name
+  //   // Hint: socket.on('event_name', ....
+  //   array.add("output_value");
+  //   array.add("80");
 
 
-    String output;
-    serializeJson(doc, output);
+  //   String output;
+  //   serializeJson(doc, output);
 
-    // Send event
-    socketIO.sendEVENT(output);
+  //   // Send event
+  //   socketIO.sendEVENT(output);
 
-    // Print JSON for debugging
-    Serial.println(output);
-  }
+  //   // Print JSON for debugging
+  //   Serial.println(output);
+  // }
 }
